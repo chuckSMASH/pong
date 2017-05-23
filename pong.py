@@ -9,6 +9,7 @@ import pygame
 from pygame import locals as consts
 
 
+FPS = 40
 BALL_MAX_SPEED = 30
 BALL_HEIGHT = 10
 BALL_WIDTH = 10
@@ -192,7 +193,7 @@ def main():
         all_sprites.draw(screen)
         pygame.display.flip()
 
-        clock.tick(30)
+        clock.tick(FPS)
 
     pygame.quit()
 
