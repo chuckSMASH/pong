@@ -12,18 +12,20 @@ import pygame
 from pygame import locals as consts
 
 
-# Ye olde constants
+# Ye olde window constants
 FRAMES_PER_SECOND = 40
 BACKGROUND_COLOR = (0, 0, 0,)
 SCREEN_HEIGHT = 1000
 SCREEN_WIDTH = 1600
 
+# Ball constants
 BALL_MIN_SPEED = 10
 BALL_MAX_SPEED = 30
 BALL_HEIGHT = 20
 BALL_WIDTH = 20
 BALL_COLOR = (127, 216, 127,)
 
+# Paddle constants
 PADDLE_MIN_SPEED = 10
 PADDLE_MAX_SPEED = 20
 PADDLE_HEIGHT = 150
@@ -190,6 +192,7 @@ def main():
     paddle1 = PlayerPaddle(50, 100)
     paddle2 = AutoPaddle(50, screen.get_rect().width - 110)
     ball = Ball()
+    all_sprites = (paddle1, paddle2, ball,)
     clock = pygame.time.Clock()
 
     while True:
@@ -210,12 +213,9 @@ def main():
         ball.check_paddle_collision(paddle2)
 
         screen.blit(background, (0, 0))
-        ball.update()
-        paddle1.update()
-        paddle2.update()
-        screen.blit(ball.image, ball.rect)
-        screen.blit(paddle1.image, paddle1.rect)
-        screen.blit(paddle2.image, paddle2.rect)
+        for sprite in all_sprites:
+            sprite.update()
+            screen.blit(sprite.image, sprite.rect)
         pygame.display.flip()
         clock.tick(FRAMES_PER_SECOND)
 
