@@ -18,15 +18,19 @@ BACKGROUND_COLOR = (0, 0, 0,)
 SCREEN_HEIGHT = 1000
 SCREEN_WIDTH = 1600
 
+BALL_MIN_SPEED = 10
 BALL_MAX_SPEED = 30
 BALL_HEIGHT = 20
 BALL_WIDTH = 20
 BALL_COLOR = (127, 216, 127,)
 
+PADDLE_MIN_SPEED = 10
 PADDLE_MAX_SPEED = 20
 PADDLE_HEIGHT = 150
 PADDLE_WIDTH = 30
 PADDLE_COLOR = (127, 216, 127,)
+PADDLE_DOWN_DIR = 1
+PADDLE_UP_DIR = -1
 
 
 # Ye olde data structures
@@ -72,8 +76,8 @@ class Ball:
         super().__init__()
         self.image = pygame.Surface((BALL_WIDTH, BALL_HEIGHT))
         self.image.fill(BALL_COLOR)
-        center_vert = SCREEN_HEIGHT // 2 - (BALL_HEIGHT / 2)
-        center_horiz = SCREEN_WIDTH // 2 - (BALL_WIDTH / 2)
+        center_vert = SCREEN_HEIGHT // 2 - (BALL_HEIGHT // 2)
+        center_horiz = SCREEN_WIDTH // 2 - (BALL_WIDTH // 2)
         self.rect = self.image.get_rect().move(center_horiz, center_vert)
         self.vector = Vector(random.randint(0, 360), BALL_MAX_SPEED)
         self.touching_paddle = False
@@ -120,23 +124,27 @@ class Paddle:
 
 
 class PlayerPaddle(Paddle):
-    speed = PADDLE_MAX_SPEED
 
     def __init__(self, top, left):
         super().__init__(top, left)
+        self.speed = 0
         self.direction = 0
+        self.is_moving = False
 
     def up(self):
-        self.direction = -1
+        self.is_moving = True
+        self.direction = PADDLE_UP_DIR
+        self.speed = PADDLE_MAX_SPEED
 
     def down(self):
-        self.direction = 1
+        self.is_moving = True
+        self.direction = PADDLE_DOWN_DIR
+        self.speed = PADDLE_MAX_SPEED
 
     def update(self):
-        if self.direction != 0:
+        if self.is_moving:
             self.rect.move_ip(0, self.speed * self.direction)
-            self.direction = 0
-            self.dirty = True
+            self.is_moving = False
 
 
 class AutoPaddle(Paddle):
@@ -150,7 +158,7 @@ class AutoPaddle(Paddle):
         return random.random() >= .99
 
     def update(self):
-        self.speed = random.uniform(0, PADDLE_MAX_SPEED)
+        self.speed = random.uniform(PADDLE_MIN_SPEED, PADDLE_MAX_SPEED)
         if self.should_change_direction():
             self.direction *= -1
         self.rect.move_ip(0, self.direction * self.speed)
@@ -185,7 +193,6 @@ def main():
     clock = pygame.time.Clock()
 
     while True:
-
         pygame.event.pump()
         keys = pygame.key.get_pressed()
 
