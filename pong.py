@@ -67,7 +67,6 @@ class Vector:
 
 
 class Ball:
-    speed = BALL_MAX_SPEED
 
     def __init__(self):
         super().__init__()
@@ -76,7 +75,7 @@ class Ball:
         center_vert = SCREEN_HEIGHT // 2 - (BALL_HEIGHT / 2)
         center_horiz = SCREEN_WIDTH // 2 - (BALL_WIDTH / 2)
         self.rect = self.image.get_rect().move(center_horiz, center_vert)
-        self.vector = Vector(random.randint(0, 360), self.speed)
+        self.vector = Vector(random.randint(0, 360), BALL_MAX_SPEED)
         self.touching_paddle = False
 
     def calc_sides_touched(self):
@@ -110,12 +109,11 @@ class Ball:
 
 
 class Paddle:
-    height = PADDLE_HEIGHT
-    width = PADDLE_WIDTH
 
     def __init__(self, top, left):
         super().__init__()
-
+        self.height = PADDLE_HEIGHT
+        self.width = PADDLE_WIDTH
         self.image = pygame.Surface((self.width, self.height))
         self.image.fill(PADDLE_COLOR)
         self.rect = self.image.get_rect().move(left, top)
