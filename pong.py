@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+"""
+Pong in Pygame (written against Python 3.5)
+"""
 
 import math
 import random
@@ -10,7 +13,7 @@ from pygame import locals as consts
 
 
 # Ye olde constants
-FPS = 40
+FRAMES_PER_SECOND = 40
 BACKGROUND_COLOR = (240, 240, 240,)
 SCREEN_HEIGHT = 1000
 SCREEN_WIDTH = 1600
@@ -197,7 +200,7 @@ def main():
         screen.blit(paddle1.image, paddle1.rect)
         screen.blit(paddle2.image, paddle2.rect)
         pygame.display.flip()
-        clock.tick(FPS)
+        clock.tick(FRAMES_PER_SECOND)
 
     pygame.quit()
 
