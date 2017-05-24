@@ -12,6 +12,8 @@ from pygame import locals as consts
 # Ye olde constants
 FPS = 40
 BACKGROUND_COLOR = (240, 240, 240,)
+SCREEN_HEIGHT = 1000
+SCREEN_WIDTH = 1600
 
 BALL_MAX_SPEED = 30
 BALL_HEIGHT = 20
@@ -36,9 +38,8 @@ class Ball(pygame.sprite.DirtySprite):
         super().__init__()
         self.image = pygame.Surface((BALL_WIDTH, BALL_HEIGHT))
         self.image.fill(BALL_COLOR)
-        screen_area = pygame.display.get_surface().get_rect()
-        center_vert = screen_area.height // 2 - 5
-        center_horiz = screen_area.width // 2 - 5
+        center_vert = SCREEN_HEIGHT // 2 - (BALL_HEIGHT / 2)
+        center_horiz = SCREEN_WIDTH // 2 - (BALL_WIDTH / 2)
         self.rect = self.image.get_rect().move(center_horiz, center_vert)
         self.angle = random.randint(0, 360)
         self.touching_paddle = False
@@ -62,11 +63,10 @@ class Ball(pygame.sprite.DirtySprite):
         return normed_angle
 
     def calc_sides_touched(self):
-        screen_area = pygame.display.get_surface().get_rect()
         return Sides(
             top = self.rect.top <= 0,
-            right = self.rect.right >= screen_area.width,
-            bottom = self.rect.bottom >= screen_area.height,
+            right = self.rect.right >= SCREEN_WIDTH,
+            bottom = self.rect.bottom >= SCREEN_HEIGHT,
             left = self.rect.left <= 0,
         )
 
@@ -122,9 +122,6 @@ class PlayerPaddle(Paddle):
     def update(self):
         # a lot of this could probably be done once...ya turd
         if self.direction != 0:
-            screen_area = pygame.display.get_surface().get_rect()
-            min_top = 0
-            max_top = screen_area.height - self.height
             self.rect.move_ip(0, self.speed * self.direction)
             self.direction = 0
             self.dirty = True
@@ -145,13 +142,12 @@ class AutoPaddle(Paddle):
         if self.should_change_direction():
             self.direction *= -1
         self.rect.move_ip(0, self.direction * self.speed)
-        screen_area = pygame.display.get_surface().get_rect()
         if self.rect.top < 0:
             self.direction *= -1
             self.rect.top = 0
-        if self.rect.bottom > screen_area.bottom:
+        if self.rect.bottom > SCREEN_HEIGHT:
             self.direction *= -1
-            self.rect.bottom = screen_area.bottom
+            self.rect.bottom = SCREEN_HEIGHT
 
 
 def is_quit_event(e):
@@ -163,7 +159,7 @@ def is_quit_event(e):
 
 def main():
     pygame.init()
-    screen = pygame.display.set_mode((1600,1000))
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption('Pong')
     pygame.mouse.set_visible(False)
 
