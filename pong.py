@@ -31,7 +31,7 @@ Sides = namedtuple('Sides', ['top', 'right', 'bottom', 'left'])
 Direction = namedtuple('Direction', ['x', 'y'])
 
 
-class Ball(pygame.sprite.DirtySprite):
+class Ball:
     speed = BALL_MAX_SPEED
 
     def __init__(self):
@@ -94,7 +94,7 @@ class Ball(pygame.sprite.DirtySprite):
         self.touching_paddle = False
 
 
-class Paddle(pygame.sprite.DirtySprite):
+class Paddle:
     height = PADDLE_HEIGHT
     width = PADDLE_WIDTH
 
@@ -171,8 +171,6 @@ def main():
     paddle2 = AutoPaddle(50, screen.get_rect().width - 110)
     ball = Ball()
     clock = pygame.time.Clock()
-    all_sprites = pygame.sprite.Group(paddle1, paddle2, ball)
-
 
     while True:
 
@@ -192,11 +190,14 @@ def main():
         ball.check_paddle_collision(paddle1)
         ball.check_paddle_collision(paddle2)
 
-        all_sprites.clear(screen, background)
-        all_sprites.update()
-        all_sprites.draw(screen)
+        screen.blit(background, (0, 0))
+        ball.update()
+        paddle1.update()
+        paddle2.update()
+        screen.blit(ball.image, ball.rect)
+        screen.blit(paddle1.image, paddle1.rect)
+        screen.blit(paddle2.image, paddle2.rect)
         pygame.display.flip()
-
         clock.tick(FPS)
 
     pygame.quit()
