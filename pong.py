@@ -14,7 +14,7 @@ from pygame import locals as consts
 
 # Ye olde constants
 FRAMES_PER_SECOND = 40
-BACKGROUND_COLOR = (240, 240, 240,)
+BACKGROUND_COLOR = (0, 0, 0,)
 SCREEN_HEIGHT = 1000
 SCREEN_WIDTH = 1600
 
@@ -31,7 +31,39 @@ PADDLE_COLOR = (127, 216, 127,)
 
 # Ye olde data structures
 Sides = namedtuple('Sides', ['top', 'right', 'bottom', 'left'])
-Direction = namedtuple('Direction', ['x', 'y'])
+Cartesian = namedtuple('Cartesian', ['x', 'y'])
+
+
+class Vector:
+
+    def __init__(self, angle, magnitude):
+        self.angle = angle
+        self.magnitude = magnitude
+
+    @classmethod
+    def from_cartesian(x, y):
+        self.magnitude = math.sqrt(x**2 + y**2)
+        if x != 0:
+            self.angle = math.degrees(math.atan(y / x))
+        else:
+            self.angle = 90 if y >= 0 else 270
+
+    @property
+    def cartesian(self):
+        magnitude = self.magnitude
+        angle = self.angle
+        return Cartesian(
+            x = magnitude * math.cos(math.radians(angle)),
+            y = magnitude * math.sin(math.radians(angle)),
+        )
+
+    def reflect(self, horizontally=False, vertically=False):
+        normed_angle = self.angle % 360
+        if horizontally:
+            normed_angle = (360 - (normed_angle - 180)) % 360
+        if vertically:
+            normed_angle = 360 - normed_angle
+        return self.__class__(normed_angle, self.magnitude)
 
 
 class Ball:
@@ -44,26 +76,8 @@ class Ball:
         center_vert = SCREEN_HEIGHT // 2 - (BALL_HEIGHT / 2)
         center_horiz = SCREEN_WIDTH // 2 - (BALL_WIDTH / 2)
         self.rect = self.image.get_rect().move(center_horiz, center_vert)
-        self.angle = random.randint(0, 360)
+        self.vector = Vector(random.randint(0, 360), self.speed)
         self.touching_paddle = False
-        self._direction = None
-
-    @property
-    def direction(self):
-        if not self._direction:
-            self._direction = Direction(
-                x = math.cos(math.radians(self.angle)),
-                y = math.sin(math.radians(self.angle)),
-            )
-        return self._direction
-
-    def calc_reflection(self, angle, reflect_h=False, reflect_v=False):
-        normed_angle = angle % 360
-        if reflect_h:
-            normed_angle = (360 - (normed_angle - 180)) % 360
-        if reflect_v:
-            normed_angle = 360 - normed_angle
-        return normed_angle
 
     def calc_sides_touched(self):
         return Sides(
@@ -90,10 +104,8 @@ class Ball:
             else:
                 reflect_h = True
                 reflect_v = False
-            self.angle = self.calc_reflection(self.angle, reflect_h, reflect_v)
-            self._direction = None
-        horiz, vert = self.direction
-        self.rect.move_ip(horiz * self.speed, vert * self.speed)
+            self.vector = self.vector.reflect(reflect_h, reflect_v)
+        self.rect.move_ip(*self.vector.cartesian)
         self.touching_paddle = False
 
 
