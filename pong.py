@@ -9,14 +9,22 @@ import pygame
 from pygame import locals as consts
 
 
+# Ye olde constants
 FPS = 40
+BACKGROUND_COLOR = (240, 240, 240,)
+
 BALL_MAX_SPEED = 30
-BALL_HEIGHT = 10
-BALL_WIDTH = 10
+BALL_HEIGHT = 20
+BALL_WIDTH = 20
+BALL_COLOR = (127, 216, 127,)
+
 PADDLE_MAX_SPEED = 20
 PADDLE_HEIGHT = 150
 PADDLE_WIDTH = 30
+PADDLE_COLOR = (127, 216, 127,)
 
+
+# Ye olde data structures
 Sides = namedtuple('Sides', ['top', 'right', 'bottom', 'left'])
 Direction = namedtuple('Direction', ['x', 'y'])
 
@@ -27,7 +35,7 @@ class Ball(pygame.sprite.DirtySprite):
     def __init__(self):
         super().__init__()
         self.image = pygame.Surface((BALL_WIDTH, BALL_HEIGHT))
-        self.image.fill((127, 216, 127,))
+        self.image.fill(BALL_COLOR)
         screen_area = pygame.display.get_surface().get_rect()
         center_vert = screen_area.height // 2 - 5
         center_horiz = screen_area.width // 2 - 5
@@ -94,7 +102,7 @@ class Paddle(pygame.sprite.DirtySprite):
         super().__init__()
 
         self.image = pygame.Surface((self.width, self.height))
-        self.image.fill((127, 216, 127))
+        self.image.fill(PADDLE_COLOR)
         self.rect = self.image.get_rect().move(left, top)
 
 
@@ -160,7 +168,7 @@ def main():
     pygame.mouse.set_visible(False)
 
     background = pygame.Surface(screen.get_size())
-    background.fill((0, 0, 0))
+    background.fill(BACKGROUND_COLOR)
     screen.blit(background, (0, 0))
 
     paddle1 = PlayerPaddle(50, 100)
