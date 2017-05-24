@@ -120,7 +120,6 @@ class PlayerPaddle(Paddle):
         self.direction = 1
 
     def update(self):
-        # a lot of this could probably be done once...ya turd
         if self.direction != 0:
             self.rect.move_ip(0, self.speed * self.direction)
             self.direction = 0
@@ -160,7 +159,7 @@ def is_quit_event(e):
 def main():
     pygame.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption('Pong')
+    pygame.display.set_caption('pong')
     pygame.mouse.set_visible(False)
 
     background = pygame.Surface(screen.get_size())
