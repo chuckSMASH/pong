@@ -81,7 +81,7 @@ class Ball:
         center_vert = SCREEN_HEIGHT // 2 - (BALL_HEIGHT // 2)
         center_horiz = SCREEN_WIDTH // 2 - (BALL_WIDTH // 2)
         self.rect = self.image.get_rect().move(center_horiz, center_vert)
-        self.vector = Vector(random.randint(0, 360), BALL_MAX_SPEED)
+        self.vector = Vector(random.randint(140, 220), BALL_MAX_SPEED)
         self.touching_paddle = False
 
     def calc_sides_touched(self):
@@ -123,12 +123,6 @@ class Paddle:
         self.image = pygame.Surface((self.width, self.height))
         self.image.fill(PADDLE_COLOR)
         self.rect = self.image.get_rect().move(left, top)
-
-
-class PlayerPaddle(Paddle):
-
-    def __init__(self, top, left):
-        super().__init__(top, left)
         self.speed = 0
         self.direction = 0
         self.is_moving = False
@@ -143,33 +137,50 @@ class PlayerPaddle(Paddle):
         self.direction = PADDLE_DOWN_DIR
         self.speed = PADDLE_MAX_SPEED
 
+    def recenter(self):
+        self.is_moving = True
+        d_center = self.rect.centery - (SCREEN_HEIGHT // 2)
+        self.direction = PADDLE_DOWN_DIR if d_center < 0 else PADDLE_UP_DIR
+        self.speed = min(PADDLE_MAX_SPEED, abs(d_center))
+
     def update(self):
         if self.is_moving:
             self.rect.move_ip(0, self.speed * self.direction)
             self.is_moving = False
 
 
-class AutoPaddle(Paddle):
+class MercilessAutomaton:
 
-    def __init__(self, top, left):
-        super().__init__(top, left)
-        self.direction = random.choice((-1, 1))
-        self.speed = 0
+    def __init__(self, paddle):
+        self.paddle = paddle
 
-    def should_change_direction(self):
-        return random.random() >= .99
+    # TODO: don't assume we are on the right side
+    def play(self, ball):
+        """
+        Implement a basic strategy
 
-    def update(self):
-        self.speed = random.uniform(PADDLE_MIN_SPEED, PADDLE_MAX_SPEED)
-        if self.should_change_direction():
-            self.direction *= -1
-        self.rect.move_ip(0, self.direction * self.speed)
-        if self.rect.top < 0:
-            self.direction *= -1
-            self.rect.top = 0
-        if self.rect.bottom > SCREEN_HEIGHT:
-            self.direction *= -1
-            self.rect.bottom = SCREEN_HEIGHT
+        Basic strategy:
+        ===============
+        1) Use geometry (naively - doesn't account for ricochets yet)
+        2) Never get tired, never get hungry. Never feel pity. Never
+           be moved by a great symphony.
+        3) Crush hoomuns.
+        """
+        angle = ball.vector.angle
+        its_coming_right_for_us = not (90 <= angle <= 270)
+        is_in_play = (its_coming_right_for_us and
+                      ball.rect.left <= self.paddle.rect.left)
+        if is_in_play:
+            x_distance= self.paddle.rect.left - ball.rect.centerx
+            projected_magnitude = math.cos(math.radians(angle)) * x_distance
+            projected = Vector(angle, projected_magnitude)
+            proj_y = ball.rect.centery + projected.cartesian.y
+            if proj_y < self.paddle.rect.top:
+                self.paddle.up()
+            if proj_y > self.paddle.rect.bottom:
+                self.paddle.down()
+        else:
+            self.paddle.recenter()
 
 
 def is_quit_event(e):
@@ -189,8 +200,9 @@ def main():
     background.fill(BACKGROUND_COLOR)
     screen.blit(background, (0, 0))
 
-    paddle1 = PlayerPaddle(50, 100)
-    paddle2 = AutoPaddle(50, screen.get_rect().width - 110)
+    paddle1 = Paddle(50, 100)
+    paddle2 = Paddle(50, screen.get_rect().width - 110)
+    computer = MercilessAutomaton(paddle2)
     ball = Ball()
     all_sprites = (paddle1, paddle2, ball,)
     clock = pygame.time.Clock()
@@ -209,6 +221,7 @@ def main():
         elif keys[consts.K_DOWN]:
             paddle1.down()
 
+        computer.play(ball)
         ball.check_paddle_collision(paddle1)
         ball.check_paddle_collision(paddle2)
 
