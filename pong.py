@@ -216,8 +216,8 @@ class MercilessAutomaton:
 
         new_diff_y = abs(next_y - y)
         # kind of wonky looking math. here's what is intended:
-        # 90 - (angle % 90) yields angle compared to y-axis
-        #                   when we are moving to the right
+        # 90 - (angle % 180) yields angle compared to y-axis
+        #                    when we are moving to the right
         # Then SohCahToa...TAN is opposite over adjacent. we've defined
         #             angle such that length of adjacent leg is
         #             distance from starting coord to the top/bottom
@@ -232,14 +232,13 @@ class MercilessAutomaton:
                                       max_reflections-1)
 
     # TODO: don't assume we are on the right side
-    # TODO: handle ricochets
     def play(self, ball):
         """
         Implement a basic strategy
 
         Basic strategy:
         ===============
-        1) Use geometry (naively - doesn't account for ricochets yet)
+        1) Use geometry
         2) Never get tired, never get hungry. Never feel pity. Never
            be moved by a great symphony.
         3) Crush hoomuns.
