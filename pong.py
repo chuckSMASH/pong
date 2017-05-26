@@ -65,7 +65,7 @@ class Vector:
         angle = self.angle
         return Cartesian(
             x = magnitude * math.cos(math.radians(angle)),
-            y = magnitude * math.sin(math.radians(angle)),
+            y = -magnitude * math.sin(math.radians(angle)),
         )
 
     def reflect(self, horizontally=False, vertically=False):
