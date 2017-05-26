@@ -13,8 +13,7 @@ import pygame
 from pygame import locals as consts
 
 
-DEBUG = False
-DEBUG_PATH = None
+global DEBUG
 DEBUG_PATH_COLOR = (128, 0, 0,)
 
 # Ye olde window constants
@@ -181,6 +180,7 @@ class MercilessAutomaton:
 
     def __init__(self, paddle):
         self.paddle = paddle
+        self.prediction = Path()
         self.sweet_spot_radius = self.paddle.rect.height // 4
 
     # TODO: don't assume we are on the right side
@@ -194,7 +194,6 @@ class MercilessAutomaton:
         start and vector are calculated from the center of the ball
         because the bounce is calculated from the edges
         """
-        DEBUG_PATH.add(start)
         x, y = start
         diff_x = intercept_x - x
         angle = vector.angle
@@ -202,9 +201,10 @@ class MercilessAutomaton:
         projected = Vector(angle, magnitude)
         proj_y = y + projected.cartesian.y
         intercept = Cartesian(intercept_x, proj_y)
+        self.prediction.add(start)
 
         if 0 <= proj_y <= SCREEN_HEIGHT:
-            DEBUG_PATH.add(intercept)
+            self.prediction.add(intercept)
             return intercept
         elif max_reflections == 0:
             return None
@@ -214,16 +214,21 @@ class MercilessAutomaton:
         else:
             next_y = SCREEN_HEIGHT
 
+        # if a calculated trajectory doesn't intercept our paddle's
+        # movement axis on-screen, we calculate the approximate
+        # intercept between the vector and the top/bottom edge of the
+        # screen, reflect the vector vertically and then see if that
+        # gets us within spitting distance our paddle's movement axis.
+        #
+        # kind of wonky looking math. breaking it down:
+        #
+        # 90 - (angle % 180): get angle of vector compared to y-axis
+        # abs: only interested in dist, not direction
+        # Now our angle is that between the vector and the y-axis; our
+        # new_diff_y is the length of the side adjacent to that angle; we
+        # calc TAN to find the length of the adjacent side which
+        # is the x-value at which the vector leaves the screen
         new_diff_y = abs(next_y - y)
-        # kind of wonky looking math. here's what is intended:
-        # 90 - (angle % 180) yields angle compared to y-axis
-        #                    when we are moving to the right
-        # Then SohCahToa...TAN is opposite over adjacent. we've defined
-        #             angle such that length of adjacent leg is
-        #             distance from starting coord to the top/bottom
-        #             edge of the screen we are moving toward
-        # this allows the computer player to predict what will happen
-        # when the ball bounces off the top/bottom edge of the screen.
         new_diff_x = abs(
             math.tan(math.radians(90 - (angle % 180))) * new_diff_y)
 
@@ -244,7 +249,7 @@ class MercilessAutomaton:
            be moved by a great symphony.
         3) Crush hoomuns.
         """
-        DEBUG_PATH.clear()
+        self.prediction.clear()
         angle = ball.vector.angle
         its_coming_right_for_us = not (90 <= angle <= 270)
         is_in_play = (its_coming_right_for_us and
@@ -320,8 +325,9 @@ def main():
             sprite.update()
             screen.blit(sprite.image, sprite.rect)
 
-        if DEBUG and len(DEBUG_PATH.points) > 1:
-            pygame.draw.lines(screen, DEBUG_PATH_COLOR, False, DEBUG_PATH.points)
+        if DEBUG and len(computer.prediction.points) > 1:
+            pygame.draw.lines(screen, DEBUG_PATH_COLOR, False,
+                              computer.prediction.points, 3)
         pygame.display.flip()
         clock.tick(FRAMES_PER_SECOND)
 
@@ -333,7 +339,5 @@ if __name__ == '__main__':
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
     global DEBUG
-    global DEBUG_PATH
     DEBUG = args.debug
-    DEBUG_PATH = Path()
     main()
