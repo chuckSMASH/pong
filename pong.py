@@ -24,7 +24,7 @@ SCREEN_HEIGHT = 1000
 SCREEN_WIDTH = 1600
 
 # Ball constants
-BALL_START_ANGLE = 45
+BALL_START_ANGLE = 62
 BALL_MIN_SPEED = 10
 BALL_MAX_SPEED = 30
 BALL_HEIGHT = 20
@@ -224,7 +224,8 @@ class MercilessAutomaton:
         #             edge of the screen we are moving toward
         # this allows the computer player to predict what will happen
         # when the ball bounces off the top/bottom edge of the screen.
-        new_diff_x = math.tan(math.radians(abs(90 - (angle % 180)))) * new_diff_y
+        new_diff_x = abs(
+            math.tan(math.radians(90 - (angle % 180))) * new_diff_y)
 
         new_start = Cartesian(x + new_diff_x, next_y)
         new_vector = vector.reflect(vertically=True)
