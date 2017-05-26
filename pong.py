@@ -8,6 +8,7 @@ import math
 import random
 import sys
 from collections import namedtuple
+from textwrap import dedent
 
 import pygame
 from pygame import locals as consts
@@ -336,7 +337,18 @@ def main():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--debug', action='store_true')
+    parser.add_argument(
+        '--debug', action='store_true',
+        help=dedent(
+            '''\
+            Run the game in debug mode. This will cause the
+            computer player's prediction of the ball's path
+            to be drawn on the screen in red.
+
+            Additionally, when in debug mode pressing the 'd'
+            key will pause the simulation with a breakpoint
+            set at the beginning of the event loop.
+            '''))
     args = parser.parse_args()
     global DEBUG
     DEBUG = args.debug
