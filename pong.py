@@ -3,6 +3,7 @@
 Pong in Pygame (written against Python 3.5)
 """
 
+import argparse
 import math
 import random
 import sys
@@ -11,6 +12,10 @@ from collections import namedtuple
 import pygame
 from pygame import locals as consts
 
+
+DEBUG = False
+DEBUG_PATH = None
+DEBUG_PATH_COLOR = (128, 0, 0,)
 
 # Ye olde window constants
 FRAMES_PER_SECOND = 40
@@ -207,6 +212,9 @@ def main():
     all_sprites = (paddle1, paddle2, ball,)
     clock = pygame.time.Clock()
 
+    if DEBUG:
+        import pdb
+
     while True:
         pygame.event.pump()
         keys = pygame.key.get_pressed()
@@ -215,6 +223,9 @@ def main():
             if is_quit_event(event):
                 pygame.quit()
                 sys.exit()
+
+        if DEBUG and keys[ord('d')]:
+            pdb.set_trace()
 
         if keys[consts.K_UP]:
             paddle1.up()
@@ -236,4 +247,11 @@ def main():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--debug', action='store_true')
+    args = parser.parse_args()
+    global DEBUG
+    global DEBUG_PATH
+    DEBUG = args.debug
+    DEBUG_PATH = Path()
     main()
