@@ -24,6 +24,7 @@ SCREEN_HEIGHT = 1000
 SCREEN_WIDTH = 1600
 
 # Ball constants
+BALL_START_ANGLE = 45
 BALL_MIN_SPEED = 10
 BALL_MAX_SPEED = 30
 BALL_HEIGHT = 20
@@ -45,11 +46,32 @@ Sides = namedtuple('Sides', ['top', 'right', 'bottom', 'left'])
 Cartesian = namedtuple('Cartesian', ['x', 'y'])
 
 
+class Path:
+
+    def __init__(self):
+        self.points = []
+
+    def __repr__(self):
+        return '<Path ({})>'.format(','.join(self.points))
+
+    def add(self, point):
+        self.points.append(point)
+
+    def clear(self):
+        self.points = []
+
+
 class Vector:
 
     def __init__(self, angle, magnitude):
         self.angle = angle
         self.magnitude = magnitude
+
+    def __repr__(self):
+        return '<Vector (a: {}, m: {} x: {}, y: {})>'.format(
+            self.angle,
+            self.magnitude,
+            *self.cartesian)
 
     @classmethod
     def from_cartesian(x, y):
@@ -86,7 +108,8 @@ class Ball:
         center_vert = SCREEN_HEIGHT // 2 - (BALL_HEIGHT // 2)
         center_horiz = SCREEN_WIDTH // 2 - (BALL_WIDTH // 2)
         self.rect = self.image.get_rect().move(center_horiz, center_vert)
-        self.vector = Vector(random.randint(140, 220), BALL_MAX_SPEED)
+        angle = BALL_START_ANGLE or random.randint(0, 360)
+        self.vector = Vector(angle, BALL_MAX_SPEED)
         self.touching_paddle = False
 
     def calc_sides_touched(self):
@@ -158,8 +181,58 @@ class MercilessAutomaton:
 
     def __init__(self, paddle):
         self.paddle = paddle
+        self.sweet_spot_radius = self.paddle.rect.height // 4
 
     # TODO: don't assume we are on the right side
+    def predict_intercept(self, start, vector, intercept_x, max_reflections=5):
+        """
+        Predict where the ball will intercept our paddle
+
+        max_reflections specifies the maximum number of bounces off
+        the top or bottom of the screen we are willing to calculate
+        ahead of time. This estimate will be a little inaccurate if
+        start and vector are calculated from the center of the ball
+        because the bounce is calculated from the edges
+        """
+        DEBUG_PATH.add(start)
+        x, y = start
+        diff_x = intercept_x - x
+        angle = vector.angle
+        magnitude = diff_x / math.cos(math.radians(angle))
+        projected = Vector(angle, magnitude)
+        proj_y = y + projected.cartesian.y
+        intercept = Cartesian(intercept_x, proj_y)
+
+        if 0 <= proj_y <= SCREEN_HEIGHT:
+            DEBUG_PATH.add(intercept)
+            return intercept
+        elif max_reflections == 0:
+            return None
+
+        if proj_y < 0:
+            next_y = 0
+        else:
+            next_y = SCREEN_HEIGHT
+
+        new_diff_y = abs(next_y - y)
+        # kind of wonky looking math. here's what is intended:
+        # 90 - (angle % 90) yields angle compared to y-axis
+        #                   when we are moving to the right
+        # Then SohCahToa...TAN is opposite over adjacent. we've defined
+        #             angle such that length of adjacent leg is
+        #             distance from starting coord to the top/bottom
+        #             edge of the screen we are moving toward
+        # this allows the computer player to predict what will happen
+        # when the ball bounces off the top/bottom edge of the screen.
+        new_diff_x = math.tan(math.radians(abs(90 - (angle % 180)))) * new_diff_y
+
+        new_start = Cartesian(x + new_diff_x, next_y)
+        new_vector = vector.reflect(vertically=True)
+        return self.predict_intercept(new_start, new_vector, intercept_x,
+                                      max_reflections-1)
+
+    # TODO: don't assume we are on the right side
+    # TODO: handle ricochets
     def play(self, ball):
         """
         Implement a basic strategy
@@ -171,18 +244,24 @@ class MercilessAutomaton:
            be moved by a great symphony.
         3) Crush hoomuns.
         """
+        DEBUG_PATH.clear()
         angle = ball.vector.angle
         its_coming_right_for_us = not (90 <= angle <= 270)
         is_in_play = (its_coming_right_for_us and
                       ball.rect.left <= self.paddle.rect.left)
         if is_in_play:
-            x_distance= self.paddle.rect.left - ball.rect.centerx
-            projected_magnitude = math.cos(math.radians(angle)) * x_distance
-            projected = Vector(angle, projected_magnitude)
-            proj_y = ball.rect.centery + projected.cartesian.y
-            if proj_y < self.paddle.rect.top:
+            ball_location = Cartesian(*ball.rect.center)
+            intercept = self.predict_intercept(
+                ball_location, ball.vector, self.paddle.rect.left)
+            sweet_spot = Sides(
+                top=self.paddle.rect.centery - self.sweet_spot_radius,
+                bottom=self.paddle.rect.centery + self.sweet_spot_radius,
+                left=None,
+                right=None,
+            )
+            if intercept and intercept.y < sweet_spot.top:
                 self.paddle.up()
-            if proj_y > self.paddle.rect.bottom:
+            if intercept and intercept.y > sweet_spot.bottom:
                 self.paddle.down()
         else:
             self.paddle.recenter()
@@ -240,6 +319,9 @@ def main():
         for sprite in all_sprites:
             sprite.update()
             screen.blit(sprite.image, sprite.rect)
+
+        if DEBUG and len(DEBUG_PATH.points) > 1:
+            pygame.draw.lines(screen, DEBUG_PATH_COLOR, False, DEBUG_PATH.points)
         pygame.display.flip()
         clock.tick(FRAMES_PER_SECOND)
 
