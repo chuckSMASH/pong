@@ -99,10 +99,10 @@ class Vector:
         return self.__class__(normed_angle, self.magnitude)
 
 
-class Ball:
+class Ball(object):
 
     def __init__(self):
-        super().__init__()
+        super(Ball, self).__init__()
         self.image = pygame.Surface((BALL_WIDTH, BALL_HEIGHT))
         self.image.fill(BALL_COLOR)
         center_vert = SCREEN_HEIGHT // 2 - (BALL_HEIGHT // 2)
@@ -142,10 +142,10 @@ class Ball:
         self.touching_paddle = False
 
 
-class Paddle:
+class Paddle(object):
 
     def __init__(self, top, left):
-        super().__init__()
+        super(Paddle, self).__init__()
         self.height = PADDLE_HEIGHT
         self.width = PADDLE_WIDTH
         self.image = pygame.Surface((self.width, self.height))
