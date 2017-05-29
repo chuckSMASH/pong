@@ -231,8 +231,8 @@ class MercilessAutomaton:
         # abs: only interested in dist, not direction
         # Now our angle is that between the vector and the y-axis; our
         # new_diff_y is the length of the side adjacent to that angle; we
-        # calc TAN to find the length of the adjacent side which
-        # is the x-value at which the vector leaves the screen
+        # calc TAN to find the length of the opposite side which
+        # is the x-value at which the vector leaves the screen.
         new_diff_y = abs(next_y - y)
         new_diff_x = abs(
             math.tan(math.radians(90 - (angle % 180))) * new_diff_y)
