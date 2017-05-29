@@ -50,6 +50,7 @@ class Path:
 
     def __init__(self):
         self.points = []
+        self.color = DEBUG_PATH_COLOR
 
     def __repr__(self):
         return '<Path ({})>'.format(','.join(self.points))
@@ -59,6 +60,9 @@ class Path:
 
     def clear(self):
         self.points = []
+
+    def draw(self, screen):
+        pygame.draw.lines(screen, self.color, False, self.points, 3)
 
 
 class Vector:
@@ -297,9 +301,6 @@ def main():
     all_sprites = (paddle1, paddle2, ball,)
     clock = pygame.time.Clock()
 
-    if DEBUG:
-        import pdb
-
     while True:
         pygame.event.pump()
         keys = pygame.key.get_pressed()
@@ -309,8 +310,8 @@ def main():
                 pygame.quit()
                 sys.exit()
 
-        if DEBUG and keys[ord('d')]:
-            pdb.set_trace()
+        if DEBUG and keys[consts.K_d]:
+            import pdb; pdb.set_trace()
 
         if keys[consts.K_UP]:
             paddle1.up()
@@ -327,8 +328,7 @@ def main():
             screen.blit(sprite.image, sprite.rect)
 
         if DEBUG and len(computer.prediction.points) > 1:
-            pygame.draw.lines(screen, DEBUG_PATH_COLOR, False,
-                              computer.prediction.points, 3)
+            computer.prediction.draw(screen)
         pygame.display.flip()
         clock.tick(FRAMES_PER_SECOND)
 
