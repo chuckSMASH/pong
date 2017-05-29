@@ -109,9 +109,10 @@ class Ball:
         super().__init__()
         self.image = pygame.Surface((BALL_WIDTH, BALL_HEIGHT))
         self.image.fill(BALL_COLOR)
-        center_vert = SCREEN_HEIGHT // 2 - (BALL_HEIGHT // 2)
-        center_horiz = SCREEN_WIDTH // 2 - (BALL_WIDTH // 2)
-        self.rect = self.image.get_rect().move(center_horiz, center_vert)
+        self.rect = self.image.get_rect()
+        self.rect.top = SCREEN_HEIGHT // 2 - (BALL_HEIGHT // 2)
+        self.rect.left = SCREEN_WIDTH // 2 - (BALL_WIDTH // 2)
+
         angle = BALL_START_ANGLE or random.randint(0, 360)
         self.vector = Vector(angle, BALL_MAX_SPEED)
         self.touching_paddle = False
