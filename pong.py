@@ -237,11 +237,13 @@ class Paddle(object):
         self.vector = None
 
     def up(self):
-        new_vector = Vector(90, PADDLE_MAX_SPEED)
+        diff_y = self.rect.top
+        new_vector = Vector(90, min(diff_y, PADDLE_MAX_SPEED))
         self.vector = new_vector
 
     def down(self):
-        new_vector = Vector(270, PADDLE_MAX_SPEED)
+        diff_y = SCREEN_HEIGHT - self.rect.bottom
+        new_vector = Vector(270, min(diff_y, PADDLE_MAX_SPEED))
         self.vector = new_vector
 
     def recenter(self):
