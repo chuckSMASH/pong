@@ -45,6 +45,10 @@ PADDLE_COLOR = Color(r=127, g=216, b=127)
 PADDLE_DOWN_DIR = 1
 PADDLE_UP_DIR = -1
 
+# Font constants
+FONT_SIZE = 72
+FONT_COLOR = Color(r=127, g=216, b=127)
+
 
 class Rect(object):
     '''
@@ -189,7 +193,6 @@ class Vector(object):
         if angle == 270:
             y = magnitude
         return Cartesian(x, y)
-
 
     def reflect(self, horizontally=False, vertically=False):
         normed_angle = self.angle % 360
@@ -364,6 +367,26 @@ def is_quit_event(e):
     )
 
 
+def pause_mode(screen):
+    PAUSE_FPS = 10
+    clock = pygame.time.Clock()
+    font = pygame.font.Font(pygame.font.get_default_font(), FONT_SIZE)
+    top = 200
+    left = SCREEN_WIDTH // 2 - font.size("PAUSED")[0] // 2
+    text = font.render("PAUSED", True, FONT_COLOR)
+    text_rect = text.get_rect()
+    text_rect.top = top
+    text_rect.left = left
+    screen.blit(text, text_rect)
+    pygame.display.flip()
+    clock.tick(PAUSE_FPS)
+    while True:
+        for e in pygame.event.get():
+            if e.type == consts.KEYDOWN and e.key in [consts.K_p, 'p']:
+                return
+        clock.tick(PAUSE_FPS)
+
+
 def main():
     pygame.init()
     pygame.display.set_caption('pong')
@@ -383,16 +406,17 @@ def main():
     clock = pygame.time.Clock()
 
     while True:
-        pygame.event.pump()
-        keys = pygame.key.get_pressed()
-
-        for event in pygame.event.get():
-            if is_quit_event(event):
+        for e in pygame.event.get():
+            if is_quit_event(e):
                 pygame.quit()
                 sys.exit()
+            elif e.type == consts.KEYDOWN and e.key == consts.K_p:
+                pause_mode(screen)
+
+        keys = pygame.key.get_pressed()
 
         if DEBUG and keys[consts.K_d]:
-            import pdb; pdb.set_trace()
+            import pdb; pdb.set_trace()  # noqa
 
         if keys[consts.K_UP]:
             paddle1.up()
@@ -403,14 +427,16 @@ def main():
         ball.handle_paddle_collision(paddle1.rect)
         ball.handle_paddle_collision(paddle2.rect)
         ball.handle_screen_edges(screen_rect)
+        for fella in game_objects:
+            fella.update()
 
         screen.blit(background, (0, 0))
         for fella in game_objects:
-            fella.update()
             fella.draw(screen)
 
         if DEBUG and len(computer.prediction.points) > 1:
             computer.prediction.draw(screen)
+
         pygame.display.flip()
         clock.tick(FRAMES_PER_SECOND)
 
