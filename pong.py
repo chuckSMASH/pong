@@ -17,36 +17,118 @@ from pygame import locals as consts
 global DEBUG
 DEBUG_PATH_COLOR = (128, 0, 0,)
 
+# Ye olde data structures
+Sides = namedtuple('Sides', ['top', 'right', 'bottom', 'left'])
+Cartesian = namedtuple('Cartesian', ['x', 'y'])
+Color = namedtuple('Color', ['r', 'g', 'b'])
+
 # Ye olde window constants
 FRAMES_PER_SECOND = 40
-BACKGROUND_COLOR = (0, 0, 0,)
+BACKGROUND_COLOR = Color(r=0, g=0, b=0)
 SCREEN_HEIGHT = 1000
 SCREEN_WIDTH = 1600
 
 # Ball constants
 BALL_START_ANGLE = 62
 BALL_MIN_SPEED = 10
-BALL_MAX_SPEED = 30
+BALL_MAX_SPEED = 35
 BALL_HEIGHT = 20
 BALL_WIDTH = 20
-BALL_COLOR = (127, 216, 127,)
+BALL_COLOR = Color(r=127, g=216, b=127)
 
 # Paddle constants
 PADDLE_MIN_SPEED = 10
 PADDLE_MAX_SPEED = 20
 PADDLE_HEIGHT = 150
 PADDLE_WIDTH = 30
-PADDLE_COLOR = (127, 216, 127,)
+PADDLE_COLOR = Color(r=127, g=216, b=127)
 PADDLE_DOWN_DIR = 1
 PADDLE_UP_DIR = -1
 
 
-# Ye olde data structures
-Sides = namedtuple('Sides', ['top', 'right', 'bottom', 'left'])
-Cartesian = namedtuple('Cartesian', ['x', 'y'])
+class Rect(object):
+    '''
+    Towards modelling our own rects independent of screen pixels
+    '''
+
+    def __init__(self, left, top, width, height, color=None):
+        self.left = left
+        self.top = top
+        self.height = height
+        self.width = width
+        self.color = color
+
+    def __repr__(self):
+        return '<Rect (x: {}, y: {}, w: {}, h: {})>'.format(
+            self.left,
+            self.top,
+            self.width,
+            self.height)
+
+    @property
+    def right(self):
+        return self.left + self.width
+
+    @property
+    def bottom(self):
+        return self.top + self.height
+
+    @property
+    def center(self):
+        return Cartesian(
+            self.left + (self.width / 2),
+            self.top + (self.height / 2)
+        )
+
+    def contains(self, other):
+        return (
+            self.left < other.left and
+            self.top < other.top and
+            self.right > other.right and
+            self.bottom > other.bottom
+        )
+
+    def collides(self, other):
+        has_collisions = (
+            self.left <= other.right and  # we aren't entirely to other's right
+            self.right >= other.left and  # nor entirely to other's left
+            self.top <= other.bottom and  # nor entirely above
+            self.bottom >= other.top      # nor entirely below
+        )
+        return has_collisions
+
+    def get_uncontained_edges(self, containing_rect):
+        if containing_rect.contains(self):
+            return Sides(False, False, False, False)
+        return Sides(
+            top=(self.top <= containing_rect.top),
+            right=(self.right >= containing_rect.right),
+            bottom=(self.bottom >= containing_rect.bottom),
+            left=(self.left <= containing_rect.left),
+        )
+
+    def get_overlapping_edges(self, other):
+        if not self.collides(other):
+            return Sides(False, False, False, False)
+        left = other.left <= self.left <= other.right
+        right = other.left <= self.right <= other.right
+        top = other.top <= self.top <= other.bottom
+        bottom = other.top <= self.bottom <= other.bottom
+        return Sides(top=top, right=right, bottom=bottom, left=left)
+
+    def move(self, vector):
+        x, y = vector.cartesian
+        self.left += x
+        self.top += y
+
+    def draw(self, surface):
+        image = pygame.Surface((self.width, self.height))
+        image.fill(self.color)
+        image_rect = image.get_rect(top=self.top, left=self.left)
+        surface.blit(image, image_rect)
 
 
-class Path:
+class Path(object):
 
     def __init__(self):
         self.points = []
@@ -65,10 +147,10 @@ class Path:
         pygame.draw.lines(screen, self.color, False, self.points, 3)
 
 
-class Vector:
+class Vector(object):
 
     def __init__(self, angle, magnitude):
-        self.angle = angle
+        self.angle = angle % 360
         self.magnitude = magnitude
 
     def __repr__(self):
@@ -78,21 +160,36 @@ class Vector:
             *self.cartesian)
 
     @classmethod
-    def from_cartesian(x, y):
-        self.magnitude = math.sqrt(x**2 + y**2)
-        if x != 0:
-            self.angle = math.degrees(math.atan(y / x))
+    def from_cartesian(cls, x, y):
+        magnitude = math.sqrt(x**2 + y**2)
+        y = -y
+        if x == 0:
+            angle = 90 if y >= 0 else 270
         else:
-            self.angle = 90 if y >= 0 else 270
+            angle = math.degrees(math.atan(y / x))
+            if y < 0 or x < 0:
+                angle += 180
+                if x > 0:
+                    angle += 180
+            angle %= 360
+        return cls(angle, magnitude)
 
     @property
     def cartesian(self):
         magnitude = self.magnitude
         angle = self.angle
-        return Cartesian(
-            x = magnitude * math.cos(math.radians(angle)),
-            y = -magnitude * math.sin(math.radians(angle)),
-        )
+        x = magnitude * math.cos(math.radians(angle))
+        y = -magnitude * math.sin(math.radians(angle))
+        if angle == 0:
+            x = magnitude
+        if angle == 90:
+            y = -magnitude
+        if angle == 180:
+            x = -magnitude
+        if angle == 270:
+            y = magnitude
+        return Cartesian(x, y)
+
 
     def reflect(self, horizontally=False, vertically=False):
         normed_angle = self.angle % 360
@@ -106,80 +203,60 @@ class Vector:
 class Ball(object):
 
     def __init__(self):
-        super(Ball, self).__init__()
-        self.image = pygame.Surface((BALL_WIDTH, BALL_HEIGHT))
-        self.image.fill(BALL_COLOR)
-        self.rect = self.image.get_rect()
-        self.rect.top = SCREEN_HEIGHT // 2 - (BALL_HEIGHT // 2)
-        self.rect.left = SCREEN_WIDTH // 2 - (BALL_WIDTH // 2)
-
+        left = SCREEN_WIDTH // 2 - (BALL_WIDTH // 2)
+        top = SCREEN_HEIGHT // 2 - (BALL_HEIGHT // 2)
+        self.rect = Rect(left, top, BALL_WIDTH, BALL_HEIGHT, BALL_COLOR)
         angle = BALL_START_ANGLE or random.randint(0, 360)
         self.vector = Vector(angle, BALL_MAX_SPEED)
-        self.touching_paddle = False
+        self.reflect_v = self.reflect_h = False
+        self.reflect_h = False
 
-    def calc_sides_touched(self):
-        return Sides(
-            top = self.rect.top <= 0,
-            right = self.rect.right >= SCREEN_WIDTH,
-            bottom = self.rect.bottom >= SCREEN_HEIGHT,
-            left = self.rect.left <= 0,
-        )
+    def handle_screen_edges(self, screen_rect):
+        uncontained = self.rect.get_uncontained_edges(screen_rect)
+        self.reflect_v |= uncontained.top or uncontained.bottom
+        self.reflect_h |= uncontained.left or uncontained.right
 
-    def check_paddle_collision(self, paddle):
-        if pygame.sprite.collide_rect(self, paddle):
-            self.touching_paddle = True
-
-    def should_change_direction(self):
-        screen_area = pygame.display.get_surface().get_rect()
-        return not screen_area.contains(self.rect) or self.touching_paddle
+    def handle_paddle_collision(self, paddle_rect):
+        touches_paddle = paddle_rect.get_overlapping_edges(self.rect)
+        self.reflect_v |= touches_paddle.top or touches_paddle.bottom
+        self.reflect_h |= touches_paddle.right or touches_paddle.left
 
     def update(self):
-        if self.should_change_direction():
-            sides_touched = self.calc_sides_touched()
-            if any(sides_touched):
-                reflect_h = sides_touched.left or sides_touched.right
-                reflect_v = sides_touched.top or sides_touched.bottom
-            else:
-                reflect_h = True
-                reflect_v = False
-            self.vector = self.vector.reflect(reflect_h, reflect_v)
-        self.rect.move_ip(*self.vector.cartesian)
-        self.touching_paddle = False
+        self.vector = self.vector.reflect(self.reflect_h, self.reflect_v)
+        self.rect.move(self.vector)
+        self.reflect_v = self.reflect_h = False
+
+    def draw(self, surface):
+        self.rect.draw(surface)
 
 
 class Paddle(object):
 
-    def __init__(self, top, left):
-        super(Paddle, self).__init__()
-        self.height = PADDLE_HEIGHT
-        self.width = PADDLE_WIDTH
-        self.image = pygame.Surface((self.width, self.height))
-        self.image.fill(PADDLE_COLOR)
-        self.rect = self.image.get_rect().move(left, top)
-        self.speed = 0
-        self.direction = 0
-        self.is_moving = False
+    def __init__(self, left, top):
+        self.rect = Rect(left, top, PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_COLOR)
+        self.vector = None
 
     def up(self):
-        self.is_moving = True
-        self.direction = PADDLE_UP_DIR
-        self.speed = PADDLE_MAX_SPEED
+        new_vector = Vector(90, PADDLE_MAX_SPEED)
+        self.vector = new_vector
 
     def down(self):
-        self.is_moving = True
-        self.direction = PADDLE_DOWN_DIR
-        self.speed = PADDLE_MAX_SPEED
+        new_vector = Vector(270, PADDLE_MAX_SPEED)
+        self.vector = new_vector
 
     def recenter(self):
-        self.is_moving = True
-        d_center = self.rect.centery - (SCREEN_HEIGHT // 2)
-        self.direction = PADDLE_DOWN_DIR if d_center < 0 else PADDLE_UP_DIR
-        self.speed = min(PADDLE_MAX_SPEED, abs(d_center))
+        d_center = self.rect.center.y - (SCREEN_HEIGHT // 2)
+        direction = PADDLE_DOWN_DIR if d_center < 0 else PADDLE_UP_DIR
+        speed = min(PADDLE_MAX_SPEED, abs(d_center))
+        self.vector = Vector.from_cartesian(0, direction*speed)
 
     def update(self):
-        if self.is_moving:
-            self.rect.move_ip(0, self.speed * self.direction)
-            self.is_moving = False
+        if self.vector is not None:
+            self.rect.move(self.vector)
+            self.vector = None
+
+    def draw(self, surface):
+        self.rect.draw(surface)
 
 
 class MercilessAutomaton:
@@ -265,8 +342,8 @@ class MercilessAutomaton:
             intercept = self.predict_intercept(
                 ball_location, ball.vector, self.paddle.rect.left)
             sweet_spot = Sides(
-                top=self.paddle.rect.centery - self.sweet_spot_radius,
-                bottom=self.paddle.rect.centery + self.sweet_spot_radius,
+                top=self.paddle.rect.center.y - self.sweet_spot_radius,
+                bottom=self.paddle.rect.center.y + self.sweet_spot_radius,
                 left=None,
                 right=None,
             )
@@ -287,19 +364,20 @@ def is_quit_event(e):
 
 def main():
     pygame.init()
-    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption('pong')
     pygame.mouse.set_visible(False)
 
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    screen_rect = Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
     background = pygame.Surface(screen.get_size())
     background.fill(BACKGROUND_COLOR)
     screen.blit(background, (0, 0))
 
-    paddle1 = Paddle(50, 100)
-    paddle2 = Paddle(50, screen.get_rect().width - 110)
+    paddle1 = Paddle(100, 50)
+    paddle2 = Paddle(screen_rect.width - 110, 50)
     computer = MercilessAutomaton(paddle2)
     ball = Ball()
-    all_sprites = (paddle1, paddle2, ball,)
+    game_objects = (paddle1, paddle2, ball,)
     clock = pygame.time.Clock()
 
     while True:
@@ -320,13 +398,14 @@ def main():
             paddle1.down()
 
         computer.play(ball)
-        ball.check_paddle_collision(paddle1)
-        ball.check_paddle_collision(paddle2)
+        ball.handle_paddle_collision(paddle1.rect)
+        ball.handle_paddle_collision(paddle2.rect)
+        ball.handle_screen_edges(screen_rect)
 
         screen.blit(background, (0, 0))
-        for sprite in all_sprites:
-            sprite.update()
-            screen.blit(sprite.image, sprite.rect)
+        for fella in game_objects:
+            fella.update()
+            fella.draw(screen)
 
         if DEBUG and len(computer.prediction.points) > 1:
             computer.prediction.draw(screen)
