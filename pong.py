@@ -49,6 +49,37 @@ PADDLE_UP_DIR = -1
 FONT_SIZE = 72
 FONT_COLOR = Color(r=127, g=216, b=127)
 
+# Action constants
+PADDLE_UP = 'PADDLE_UP'
+PADDLE_DOWN = 'PADDLE_DOWN'
+
+# Key maps
+PLAYER1_KEY_MAP = {
+    consts.K_UP: PADDLE_UP,
+    consts.K_DOWN: PADDLE_DOWN,
+}
+
+PLAYER2_KEY_MAP = {
+    consts.K_w: PADDLE_UP,
+    consts.K_s: PADDLE_DOWN,
+}
+
+
+class Player(object):
+
+    def __init__(self, key_map, paddle):
+        self.key_map = key_map
+        self.paddle = paddle
+        self.actions = {
+            PADDLE_UP: self.paddle.up,
+            PADDLE_DOWN: self.paddle.down,
+        }
+
+    def dispatch(self, keys_pressed):
+        for key, action in self.key_map.items():
+            if keys_pressed[key]:
+                self.actions.get(action, lambda: None)()
+
 
 class Rect(object):
     '''
@@ -400,6 +431,7 @@ def main():
 
     paddle1 = Paddle(100, 50)
     paddle2 = Paddle(screen_rect.width - 110, 50)
+    human = Player(PLAYER1_KEY_MAP, paddle1)
     computer = MercilessAutomaton(paddle2)
     ball = Ball()
     game_objects = (paddle1, paddle2, ball,)
@@ -418,11 +450,7 @@ def main():
         if DEBUG and keys[consts.K_d]:
             import pdb; pdb.set_trace()  # noqa
 
-        if keys[consts.K_UP]:
-            paddle1.up()
-        elif keys[consts.K_DOWN]:
-            paddle1.down()
-
+        human.dispatch(keys)
         computer.play(ball)
         ball.handle_paddle_collision(paddle1.rect)
         ball.handle_paddle_collision(paddle2.rect)
