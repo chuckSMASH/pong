@@ -7,6 +7,7 @@ import argparse
 import math
 import random
 import sys
+from collections import OrderedDict
 from collections import namedtuple
 from textwrap import dedent
 
@@ -23,15 +24,17 @@ Cartesian = namedtuple('Cartesian', ['x', 'y'])
 Color = namedtuple('Color', ['r', 'g', 'b'])
 
 # Ye olde window constants
-FRAMES_PER_SECOND = 40
+FRAMES_PER_SECOND = 60
 BACKGROUND_COLOR = Color(r=0, g=0, b=0)
 SCREEN_HEIGHT = 1000
 SCREEN_WIDTH = 1600
 
 # Ball constants
-BALL_START_ANGLE = 62
-BALL_MIN_SPEED = 10
-BALL_MAX_SPEED = 35
+BALL_START_ANGLE = 50
+BALL_MIN_SPEED = 15
+BALL_MAX_SPEED = 30
+BALL_MIN_ANGLE = 5
+BALL_MAX_ANGLE = 70
 BALL_HEIGHT = 20
 BALL_WIDTH = 20
 BALL_COLOR = Color(r=127, g=216, b=127)
@@ -40,13 +43,20 @@ BALL_COLOR = Color(r=127, g=216, b=127)
 PADDLE_MIN_SPEED = 10
 PADDLE_MAX_SPEED = 20
 PADDLE_HEIGHT = 150
-PADDLE_WIDTH = 30
+PADDLE_WIDTH = 50
 PADDLE_COLOR = Color(r=127, g=216, b=127)
 PADDLE_DOWN_DIR = 1
 PADDLE_UP_DIR = -1
 
+# Sauce constants
+SAUCE_MULTIPLIER = 30
+SAUCE_MAX = SAUCE_MULTIPLIER // 2
+SAUCE_MIN = -SAUCE_MAX
+
 # Font constants
-FONT_SIZE = 72
+FONT = pygame.font.get_default_font()
+TITLE_FONT_SIZE = 72
+FONT_SIZE = 36
 FONT_COLOR = Color(r=127, g=216, b=127)
 
 # Action constants
@@ -63,6 +73,12 @@ PLAYER2_KEY_MAP = {
     consts.K_w: PADDLE_UP,
     consts.K_s: PADDLE_DOWN,
 }
+
+# Menu constants
+MENU_OPTIONS = OrderedDict([
+    ('1 Player', 1,),
+    ('2 Players', 2,),
+])
 
 
 class Player(object):
@@ -114,6 +130,14 @@ class Rect(object):
             self.left + (self.width / 2),
             self.top + (self.height / 2)
         )
+
+    @right.setter
+    def right(self, value):
+        self.left = value - self.width
+
+    @bottom.setter
+    def bottom(self, value):
+        self.top = value - self.height
 
     def contains(self, other):
         return (
@@ -241,9 +265,9 @@ class Ball(object):
         top = SCREEN_HEIGHT // 2 - (BALL_HEIGHT // 2)
         self.rect = Rect(left, top, BALL_WIDTH, BALL_HEIGHT, BALL_COLOR)
         angle = BALL_START_ANGLE or random.randint(0, 360)
-        self.vector = Vector(angle, BALL_MAX_SPEED)
+        self.vector = Vector(angle, BALL_MIN_SPEED)
+        self.sauce = 0
         self.reflect_v = self.reflect_h = False
-        self.reflect_h = False
 
     def handle_screen_edges(self, screen_rect):
         uncontained = self.rect.get_uncontained_edges(screen_rect)
@@ -254,10 +278,36 @@ class Ball(object):
         touches_paddle = paddle_rect.get_overlapping_edges(self.rect)
         self.reflect_v |= touches_paddle.top or touches_paddle.bottom
         self.reflect_h |= touches_paddle.right or touches_paddle.left
+        if any(touches_paddle):
+            diff_y = paddle_rect.center.y - self.rect.center.y
+            if paddle_rect.left < SCREEN_WIDTH // 2:
+                self.rect.left = paddle_rect.right + 1
+            else:
+                self.rect.right = paddle_rect.left - 1
+            going_up = 1 if self.vector.angle < 180 else -1
+            sauce = round((diff_y / paddle_rect.height) * SAUCE_MULTIPLIER)
+            self.vector.magnitude = min(self.vector.magnitude + 2,
+                                        BALL_MAX_SPEED)
+            self.sauce = min(SAUCE_MAX, max(SAUCE_MIN, sauce * going_up))
+
+    def apply_sauce(self, vector, sauce):
+        angle = vector.angle
+        abs_from_x_axis = 90 - abs(90 - (angle % 180))
+        # account for quadrant. the quadrant we are in impacts
+        # +/- and flattening/steepening behavior
+        direction = 1 if angle % 180 < 90 else -1
+        mellow_sauce = min(BALL_MAX_ANGLE - abs_from_x_axis,
+                           max(direction * sauce,
+                               BALL_MIN_ANGLE - abs_from_x_axis))
+        return Vector(vector.angle + mellow_sauce, vector.magnitude)
+
 
     def update(self):
         self.vector = self.vector.reflect(self.reflect_h, self.reflect_v)
+        if self.sauce != 0:
+            self.vector = self.apply_sauce(self.vector, self.sauce)
         self.rect.move(self.vector)
+        self.sauce = 0
         self.reflect_v = self.reflect_h = False
 
     def draw(self, surface):
@@ -398,10 +448,10 @@ def is_quit_event(e):
     )
 
 
-def pause_mode(screen):
+def pause_loop(screen):
     PAUSE_FPS = 10
     clock = pygame.time.Clock()
-    font = pygame.font.Font(pygame.font.get_default_font(), FONT_SIZE)
+    font = pygame.font.Font(FONT, TITLE_FONT_SIZE)
     top = 200
     left = SCREEN_WIDTH // 2 - font.size("PAUSED")[0] // 2
     text = font.render("PAUSED", True, FONT_COLOR)
@@ -418,16 +468,17 @@ def pause_mode(screen):
         clock.tick(PAUSE_FPS)
 
 
-def main():
-    pygame.init()
-    pygame.display.set_caption('pong')
-    pygame.mouse.set_visible(False)
+def menu_loop(screen):
+    return 1
 
-    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+
+def game_loop(screen):
     screen_rect = Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
     background = pygame.Surface(screen.get_size())
     background.fill(BACKGROUND_COLOR)
     screen.blit(background, (0, 0))
+
+    num_players = menu_loop(screen)
 
     paddle1 = Paddle(100, 50)
     paddle2 = Paddle(screen_rect.width - 110, 50)
@@ -443,7 +494,7 @@ def main():
                 pygame.quit()
                 sys.exit()
             elif e.type == consts.KEYDOWN and e.key == consts.K_p:
-                pause_mode(screen)
+                pause_loop(screen)
 
         keys = pygame.key.get_pressed()
 
@@ -452,9 +503,9 @@ def main():
 
         human.dispatch(keys)
         computer.play(ball)
+        ball.handle_screen_edges(screen_rect)
         ball.handle_paddle_collision(paddle1.rect)
         ball.handle_paddle_collision(paddle2.rect)
-        ball.handle_screen_edges(screen_rect)
         for fella in game_objects:
             fella.update()
 
@@ -468,6 +519,14 @@ def main():
         pygame.display.flip()
         clock.tick(FRAMES_PER_SECOND)
 
+
+def main():
+    pygame.init()
+    pygame.display.set_caption('pong')
+    pygame.mouse.set_visible(False)
+
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    game_loop(screen)
     pygame.quit()
 
 
