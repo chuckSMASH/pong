@@ -83,3 +83,47 @@ class VectorTestCase(unittest.TestCase):
             self.assertAlmostEqual(rehoriz.angle, vector.angle)
             self.assertAlmostEqual(combo1.angle, combo2.angle)
             self.assertAlmostEqual(combo1.angle, both.angle)
+
+
+class SegmentTestCase(unittest.TestCase):
+
+    def setUp(self):
+        P = pong.Cartesian
+        self.s1 = pong.Segment(P(0, 0), P(1, 1))
+        self.s2 = pong.Segment(P(0, 1), P(1, 0))
+        self.s3 = pong.Segment(P(0, -1), P(1, 0))
+        self.s4 = pong.Segment(P(1, 1), P(2, 2))
+
+    def test_line(self):
+        s1_line = self.s1.line
+        s2_line = self.s2.line
+        s3_line = self.s3.line
+        self.assertEqual(s1_line.slope, 1)
+        self.assertEqual(s1_line.intercept, 0)
+        self.assertEqual(s2_line.slope, -1)
+        self.assertEqual(s2_line.intercept, 1)
+        self.assertEqual(s3_line.slope, 1)
+        self.assertEqual(s3_line.intercept, -1)
+
+    def test_intersection(self):
+        P = pong.Cartesian
+        actual_expected = [
+            (self.s1.intersection(self.s2), P(0.5, 0.5)),
+            (self.s2.intersection(self.s1), P(0.5, 0.5)),
+            (self.s1.intersection(self.s3), None),
+            (self.s3.intersection(self.s1), None),
+            (self.s1.intersection(self.s4), None),
+            (self.s4.intersection(self.s1), None),
+            (self.s2.intersection(self.s3), P(1, 0)),
+            (self.s3.intersection(self.s2), P(1, 0)),
+            (self.s2.intersection(self.s4), None),
+            (self.s4.intersection(self.s2), None),
+            (self.s3.intersection(self.s4), None),
+            (self.s4.intersection(self.s3), None),
+        ]
+        for actual, expected in actual_expected:
+            if expected is None:
+                self.assertIsNone(actual)
+            else:
+                for actual_coord, expected_coord in zip(actual, expected):
+                    self.assertAlmostEqual(actual_coord, expected_coord)

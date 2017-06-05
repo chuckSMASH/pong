@@ -22,6 +22,7 @@ DEBUG_PATH_COLOR = (128, 0, 0,)
 Sides = namedtuple('Sides', ['top', 'right', 'bottom', 'left'])
 Cartesian = namedtuple('Cartesian', ['x', 'y'])
 Color = namedtuple('Color', ['r', 'g', 'b'])
+Line = namedtuple('Line', ['slope', 'intercept'])
 
 # Ye olde window constants
 FRAMES_PER_SECOND = 60
@@ -95,6 +96,76 @@ class Player(object):
         for key, action in self.key_map.items():
             if keys_pressed[key]:
                 self.actions.get(action, lambda: None)()
+
+
+class Segment(object):
+    '''
+    Construct a line segment from two cartesian points
+    '''
+
+    def __init__(self, start, end):
+        self.start = start
+        self.end = end
+
+    @property
+    def line(self):
+        '''
+        Return the values m and b satisfying y = mx + b
+
+        Values are returned as a tuple (m, b). If the start and
+        end points for this segment define a vertical line, this
+        function will return (None, None)
+        '''
+        start, end = self.start, self.end
+        diff_x = end.x - start.x
+        diff_y = end.y - start.y
+        m  = (diff_y / diff_x) if diff_x != 0 else None
+        b = (start.y - m * start.x) if m is not None else None
+        return Line(slope=m, intercept=b)
+
+    @property
+    def domain(self):
+        return [f(self.start.x, self.end.x) for f in (min, max)]
+
+    @property
+    def range(self):
+        return [f(self.start.y, self.end.y) for f in (min, max)]
+
+    def in_domain(self, x):
+        domain = self.domain
+        return domain[0] <= x <= domain[1]
+
+    def in_range(self, y):
+        range = self.range
+        return range[0] <= y <= range[1]
+
+    def intersection(self, other):
+        '''
+        Get the intersection of two line segments or None
+        '''
+        our_line = self.line
+        their_line = other.line
+        if our_line.slope == their_line.slope:
+            # we are parallel
+            return None
+        if our_line.slope is None:
+            # we are vertical
+            x = self.start.x
+            y = their_line.slope * x + their_line.intercept
+        elif their_line.slope is None:
+            # they are vertical
+            x = other.start.x
+            y = our_line.slope * x + our_line.intercept
+        else:
+            x = (
+                (their_line.intercept - our_line.intercept) /
+                (our_line.slope - their_line.slope)
+            )
+            y = our_line.slope * x + our_line.intercept
+
+        if all(seg.in_domain(x) and seg.in_range(y) for seg in (self, other)):
+            return Cartesian(x, y)
+        return None
 
 
 class Rect(object):
