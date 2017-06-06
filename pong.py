@@ -372,20 +372,47 @@ class Ball(object):
         self.reflect_v |= uncontained.top or uncontained.bottom
         self.reflect_h |= uncontained.left or uncontained.right
 
-    def handle_paddle_collision(self, paddle_rect):
-        touches_paddle = paddle_rect.get_overlapping_edges(self.rect)
-        self.reflect_v |= touches_paddle.top or touches_paddle.bottom
-        self.reflect_h |= touches_paddle.right or touches_paddle.left
-        if any(touches_paddle):
-            diff_y = paddle_rect.center.y - self.rect.center.y
-            if paddle_rect.left < SCREEN_WIDTH // 2:
-                self.rect.left = paddle_rect.right + 1
-            else:
-                self.rect.right = paddle_rect.left - 1
-            going_up = 1 if self.vector.angle < 180 else -1
-            sauce = round((diff_y / paddle_rect.height) * SAUCE_MULTIPLIER)
-            self.vector.magnitude = min(self.vector.magnitude + 2,
-                                        BALL_MAX_SPEED)
+    def handle_paddle_collision(self, paddle):
+        going_left = 90 < self.vector.angle < 270
+        going_up = 0 < self.vector.angle < 180
+        ball_y = self.rect.center.y
+        paddle_sides = paddle.rect.segments
+        delta = self.vector.cartesian
+        ball_corners = Corners(*[
+            Segment(
+                corner,
+                Cartesian(corner.x + delta.x, corner.y + delta.y))
+            for corner in self.rect.corners
+        ])
+        hits = Sides(*[
+            next(
+                filter(
+                    lambda c: c is not None,
+                    [corner.intersection(side) for corner in ball_corners]
+                ), None
+            )
+            for side in paddle_sides
+        ])
+        if any(hits):
+            self.vector = self.vector.reflect(horizontally=True)
+            if going_left and hits.right:
+                self.rect.left = hits.right.x
+                self.rect.top = hits.right.y
+            elif not going_left and hits.left:
+                self.rect.right = hits.left.x
+                self.rect.top = hits.left.y
+
+            if hits.bottom and going_up:
+                self.rect.top = hits.bottom.y
+                self.vector = self.vector.reflect(vertically=True)
+            elif hits.top and not going_up:
+                self.rect.bottom = hits.top.y
+                self.vector = self.vector.reflect(vertically=True)
+            diff_y = paddle.rect.center.y - ball_y
+            # going_up = 1 if self.vector.angle < 180 else -1
+            sauce = round((diff_y / paddle.rect.height) * SAUCE_MULTIPLIER)
+            # self.vector.magnitude = min(self.vector.magnitude + 2,
+            #                             BALL_MAX_SPEED)
             self.sauce = min(SAUCE_MAX, max(SAUCE_MIN, sauce * going_up))
 
     def apply_sauce(self, vector, sauce):
@@ -602,8 +629,8 @@ def game_loop(screen):
         human.dispatch(keys)
         computer.play(ball)
         ball.handle_screen_edges(screen_rect)
-        ball.handle_paddle_collision(paddle1.rect)
-        ball.handle_paddle_collision(paddle2.rect)
+        ball.handle_paddle_collision(paddle1)
+        ball.handle_paddle_collision(paddle2)
         for fella in game_objects:
             fella.update()
 
