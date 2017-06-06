@@ -20,7 +20,8 @@ DEBUG_PATH_COLOR = (128, 0, 0,)
 
 # Ye olde data structures
 Sides = namedtuple('Sides', ['top', 'right', 'bottom', 'left'])
-Corners = namedtuple('Corners', ['topleft', 'topright', 'bottomright', 'bottomleft'])
+Corners = namedtuple('Corners',
+                     ['topleft', 'topright', 'bottomright', 'bottomleft'])
 Cartesian = namedtuple('Cartesian', ['x', 'y'])
 Color = namedtuple('Color', ['r', 'g', 'b'])
 Line = namedtuple('Line', ['slope', 'intercept'])
@@ -120,7 +121,7 @@ class Segment(object):
         start, end = self.start, self.end
         diff_x = end.x - start.x
         diff_y = end.y - start.y
-        m  = (diff_y / diff_x) if diff_x != 0 else None
+        m = (diff_y / diff_x) if diff_x != 0 else None
         b = (start.y - m * start.x) if m is not None else None
         return Line(slope=m, intercept=b)
 
@@ -222,19 +223,12 @@ class Rect(object):
 
     @property
     def segments(self):
+        corners = self.corners
         return Sides(
-            top=Segment(
-                Cartesian(self.left, self.top),
-                Cartesian(self.right, self.top)),
-            right=Segment(
-                Cartesian(self.right, self.top),
-                Cartesian(self.right, self.bottom)),
-            bottom=Segment(
-                Cartesian(self.left, self.bottom),
-                Cartesian(self.right, self.bottom)),
-            left=Segment(
-                Cartesian(self.left, self.top),
-                Cartesian(self.left, self.bottom))
+            top=Segment(corners.topleft, corners.topright),
+            right=Segment(corners.topright, corners.bottomright),
+            bottom=Segment(corners.bottomleft, corners.bottomright),
+            left=Segment(corners.topleft, corners.bottomleft)
         )
 
     def contains(self, other):
@@ -425,7 +419,6 @@ class Ball(object):
                            max(direction * sauce,
                                BALL_MIN_ANGLE - abs_from_x_axis))
         return Vector(vector.angle + mellow_sauce, vector.magnitude)
-
 
     def update(self):
         self.vector = self.vector.reflect(self.reflect_h, self.reflect_v)
