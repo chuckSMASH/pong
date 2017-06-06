@@ -20,6 +20,7 @@ DEBUG_PATH_COLOR = (128, 0, 0,)
 
 # Ye olde data structures
 Sides = namedtuple('Sides', ['top', 'right', 'bottom', 'left'])
+Corners = namedtuple('Corners', ['topleft', 'topright', 'bottomright', 'bottomleft'])
 Cartesian = namedtuple('Cartesian', ['x', 'y'])
 Color = namedtuple('Color', ['r', 'g', 'b'])
 Line = namedtuple('Line', ['slope', 'intercept'])
@@ -44,7 +45,7 @@ BALL_COLOR = Color(r=127, g=216, b=127)
 PADDLE_MIN_SPEED = 10
 PADDLE_MAX_SPEED = 20
 PADDLE_HEIGHT = 150
-PADDLE_WIDTH = 50
+PADDLE_WIDTH = 20
 PADDLE_COLOR = Color(r=127, g=216, b=127)
 PADDLE_DOWN_DIR = 1
 PADDLE_UP_DIR = -1
@@ -104,8 +105,8 @@ class Segment(object):
     '''
 
     def __init__(self, start, end):
-        self.start = start
-        self.end = end
+        self.start = Cartesian(*start)
+        self.end = Cartesian(*end)
 
     @property
     def line(self):
@@ -209,6 +210,32 @@ class Rect(object):
     @bottom.setter
     def bottom(self, value):
         self.top = value - self.height
+
+    @property
+    def corners(self):
+        return Corners(
+            topleft=Cartesian(self.left, self.top),
+            topright=Cartesian(self.right, self.top),
+            bottomright=Cartesian(self.right, self.bottom),
+            bottomleft=Cartesian(self.left, self.bottom),
+        )
+
+    @property
+    def segments(self):
+        return Sides(
+            top=Segment(
+                Cartesian(self.left, self.top),
+                Cartesian(self.right, self.top)),
+            right=Segment(
+                Cartesian(self.right, self.top),
+                Cartesian(self.right, self.bottom)),
+            bottom=Segment(
+                Cartesian(self.left, self.bottom),
+                Cartesian(self.right, self.bottom)),
+            left=Segment(
+                Cartesian(self.left, self.top),
+                Cartesian(self.left, self.bottom))
+        )
 
     def contains(self, other):
         return (
