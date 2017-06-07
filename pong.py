@@ -5,7 +5,6 @@ Pong in Pygame (written against Python 3.5)
 
 import argparse
 import math
-import random
 import sys
 from collections import OrderedDict
 from collections import namedtuple
@@ -34,19 +33,21 @@ SCREEN_HEIGHT = 1000
 SCREEN_WIDTH = 1600
 
 # Ball constants
-BALL_START_ANGLE = 50
+BALL_START_ANGLE = 48
 BALL_MIN_SPEED = 20 * BASE_FPS / FRAMES_PER_SECOND
-BALL_MAX_SPEED = 60 * BASE_FPS / FRAMES_PER_SECOND
-BALL_SPEED_INCR = 1
-BALL_MIN_ANGLE = 10
+BALL_MAX_SPEED = 80 * BASE_FPS / FRAMES_PER_SECOND
+BALL_SPEED_INCR = 1 * BASE_FPS / FRAMES_PER_SECOND
+BALL_MIN_ANGLE = 20
 BALL_MAX_ANGLE = 70
 BALL_HEIGHT = 20
 BALL_WIDTH = 20
 BALL_COLOR = Color(r=127, g=216, b=127)
 
 # Paddle constants
-PADDLE_MIN_SPEED = 5 * BASE_FPS / FRAMES_PER_SECOND
-PADDLE_MAX_SPEED = 20 * BASE_FPS / FRAMES_PER_SECOND
+PADDLE_MIN_SPEED = 20 * BASE_FPS / FRAMES_PER_SECOND
+PADDLE_MAX_SPEED = 40 * BASE_FPS / FRAMES_PER_SECOND
+PADDLE_SPEED_INCR = 2 * BASE_FPS / FRAMES_PER_SECOND
+PADDLE_SPEED_DECR = 6 * BASE_FPS / FRAMES_PER_SECOND
 PADDLE_HEIGHT = 120
 PADDLE_WIDTH = 10
 PADDLE_COLOR = Color(r=127, g=216, b=127)
@@ -358,15 +359,18 @@ class Ball(object):
         left = SCREEN_WIDTH // 2 - (BALL_WIDTH // 2)
         top = SCREEN_HEIGHT // 2 - (BALL_HEIGHT // 2)
         self.rect = Rect(left, top, BALL_WIDTH, BALL_HEIGHT, BALL_COLOR)
-        angle = BALL_START_ANGLE or random.randint(0, 360)
-        self.vector = Vector(angle, BALL_MIN_SPEED)
+        self.vector = Vector(BALL_START_ANGLE, BALL_MIN_SPEED)
         self.sauce = 0
-        self.reflect_v = self.reflect_h = False
 
     def handle_screen_edges(self, screen_rect):
         uncontained = self.rect.get_uncontained_edges(screen_rect)
-        self.reflect_v |= uncontained.top or uncontained.bottom
-        self.reflect_h |= uncontained.left or uncontained.right
+        reflect_h = uncontained.left or uncontained.right
+        reflect_v = uncontained.top or uncontained.bottom
+        if uncontained.bottom:
+            self.rect.bottom = SCREEN_HEIGHT - 1
+        elif uncontained.top:
+            self.rect.top = 1
+        self.vector = self.vector.reflect(reflect_h, reflect_v)
 
     def handle_paddle_collision(self, paddle):
         going_left = 90 < self.vector.angle < 270
@@ -383,7 +387,7 @@ class Ball(object):
         hits = Sides(*[
             next(
                 filter(
-                    lambda c: c is not None,
+                    lambda c: c,
                     [corner.intersection(side) for corner in ball_corners]
                 ), None
             )
@@ -392,10 +396,10 @@ class Ball(object):
         if any(hits):
             self.vector = self.vector.reflect(horizontally=True)
             if going_left and hits.right:
-                self.rect.left = hits.right.x
+                self.rect.left = hits.right.x + 1
                 self.rect.top = hits.right.y
             elif not going_left and hits.left:
-                self.rect.right = hits.left.x
+                self.rect.right = hits.left.x - 1
                 self.rect.top = hits.left.y
 
             if hits.bottom and going_up:
@@ -405,10 +409,10 @@ class Ball(object):
                 self.rect.bottom = hits.top.y
                 self.vector = self.vector.reflect(vertically=True)
             diff_y = paddle.rect.center.y - ball_y
-            # going_up = 1 if self.vector.angle < 180 else -1
             sauce = round((diff_y / paddle.rect.height) * SAUCE_MULTIPLIER)
-            # self.vector.magnitude = min(self.vector.magnitude + 2,
-            #                             BALL_MAX_SPEED)
+            self.vector.magnitude = min(
+                self.vector.magnitude + BALL_SPEED_INCR,
+                BALL_MAX_SPEED)
             self.sauce = min(SAUCE_MAX, max(SAUCE_MIN, sauce * going_up))
 
     def apply_sauce(self, vector, sauce):
@@ -423,12 +427,11 @@ class Ball(object):
         return Vector(vector.angle + mellow_sauce, vector.magnitude)
 
     def update(self):
-        self.vector = self.vector.reflect(self.reflect_h, self.reflect_v)
         if self.sauce != 0:
             self.vector = self.apply_sauce(self.vector, self.sauce)
-        self.rect.move(self.vector)
-        self.sauce = 0
-        self.reflect_v = self.reflect_h = False
+            self.sauce = 0
+        else:
+            self.rect.move(self.vector)
 
     def draw(self, surface):
         self.rect.draw(surface)
@@ -438,28 +441,60 @@ class Paddle(object):
 
     def __init__(self, left, top):
         self.rect = Rect(left, top, PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_COLOR)
-        self.vector = None
+        self.vector = Vector(90, 0)
+        self.moved = False
 
     def up(self):
+        self.moved = True
+        prev_vector = self.vector
+        if prev_vector.angle == 90:
+            speed = self.accelerate(prev_vector.magnitude)
+        else:
+            speed = PADDLE_MIN_SPEED
         diff_y = self.rect.top
-        new_vector = Vector(90, min(diff_y, PADDLE_MAX_SPEED))
-        self.vector = new_vector
+        self.vector = Vector(90, min(diff_y, speed))
 
     def down(self):
+        self.moved = True
+        prev_vector = self.vector
+        if prev_vector.angle == 270:
+            speed = self.accelerate(prev_vector.magnitude)
+        else:
+            speed = PADDLE_MIN_SPEED
         diff_y = SCREEN_HEIGHT - self.rect.bottom
-        new_vector = Vector(270, min(diff_y, PADDLE_MAX_SPEED))
-        self.vector = new_vector
+        self.vector = Vector(270, min(diff_y, speed))
 
     def recenter(self):
+        self.moved = True
         d_center = self.rect.center.y - (SCREEN_HEIGHT // 2)
+        prev_vector = self.vector
         direction = PADDLE_DOWN_DIR if d_center < 0 else PADDLE_UP_DIR
-        speed = min(PADDLE_MAX_SPEED, abs(d_center))
+        turned_around = (
+            (prev_vector.angle == 270 and direction == PADDLE_UP_DIR) or
+            (prev_vector.angle == 90 and direction == PADDLE_DOWN_DIR))
+        if turned_around:
+            speed = PADDLE_MIN_SPEED
+        else:
+            speed = self.accelerate(prev_vector.magnitude)
+        speed = min(speed, abs(d_center))
         self.vector = Vector.from_cartesian(0, direction*speed)
 
+    def accelerate(self, prev_speed):
+        return min(
+            PADDLE_MAX_SPEED,
+            prev_speed + PADDLE_SPEED_INCR)
+
+    def decelerate(self, prev_speed):
+        return max(
+            0,
+            prev_speed - PADDLE_SPEED_DECR)
+
     def update(self):
-        if self.vector is not None:
-            self.rect.move(self.vector)
-            self.vector = None
+        if not self.moved:
+            speed = self.decelerate(self.vector.magnitude)
+            self.vector = Vector(self.vector.angle, speed)
+        self.moved = False
+        self.rect.move(self.vector)
 
     def draw(self, surface):
         self.rect.draw(surface)
