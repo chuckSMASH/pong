@@ -43,7 +43,7 @@ class VectorTestCase(unittest.TestCase):
         for angle in range(0, 361, 3):
             cos = math.cos(math.radians(angle))
             sin = math.sin(math.radians(angle))
-            point = pong.Cartesian(cos, -sin)
+            point = pong.Point(cos, -sin)
             vector = pong.Vector(angle, 1)
             cart_vector = pong.Vector.from_cartesian(*point)
             self.points.append(point)
@@ -88,7 +88,7 @@ class VectorTestCase(unittest.TestCase):
 class SegmentTestCase(unittest.TestCase):
 
     def setUp(self):
-        P = pong.Cartesian
+        P = pong.Point
         self.s1 = pong.Segment(P(0, 0), P(1, 1))
         self.s2 = pong.Segment(P(0, 1), P(1, 0))
         self.s3 = pong.Segment(P(0, -1), P(1, 0))
@@ -106,7 +106,7 @@ class SegmentTestCase(unittest.TestCase):
         self.assertEqual(s3_line.intercept, -1)
 
     def test_intersection(self):
-        P = pong.Cartesian
+        P = pong.Point
         actual_expected = [
             (self.s1.intersection(self.s2), P(0.5, 0.5)),
             (self.s2.intersection(self.s1), P(0.5, 0.5)),

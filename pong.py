@@ -22,7 +22,7 @@ DEBUG_PATH_COLOR = (128, 0, 0,)
 Sides = namedtuple('Sides', ['top', 'right', 'bottom', 'left'])
 Corners = namedtuple('Corners',
                      ['topleft', 'topright', 'bottomright', 'bottomleft'])
-Cartesian = namedtuple('Cartesian', ['x', 'y'])
+Point = namedtuple('Point', ['x', 'y'])
 Color = namedtuple('Color', ['r', 'g', 'b'])
 Line = namedtuple('Line', ['slope', 'intercept'])
 
@@ -106,8 +106,8 @@ class Segment(object):
     '''
 
     def __init__(self, start, end):
-        self.start = Cartesian(*start)
-        self.end = Cartesian(*end)
+        self.start = Point(*start)
+        self.end = Point(*end)
 
     @property
     def line(self):
@@ -166,7 +166,7 @@ class Segment(object):
             y = our_line.slope * x + our_line.intercept
 
         if all(seg.in_domain(x) and seg.in_range(y) for seg in (self, other)):
-            return Cartesian(x, y)
+            return Point(x, y)
         return None
 
 
@@ -199,7 +199,7 @@ class Rect(object):
 
     @property
     def center(self):
-        return Cartesian(
+        return Point(
             self.left + (self.width / 2),
             self.top + (self.height / 2)
         )
@@ -215,10 +215,10 @@ class Rect(object):
     @property
     def corners(self):
         return Corners(
-            topleft=Cartesian(self.left, self.top),
-            topright=Cartesian(self.right, self.top),
-            bottomright=Cartesian(self.right, self.bottom),
-            bottomleft=Cartesian(self.left, self.bottom),
+            topleft=Point(self.left, self.top),
+            topright=Point(self.right, self.top),
+            bottomright=Point(self.right, self.bottom),
+            bottomleft=Point(self.left, self.bottom),
         )
 
     @property
@@ -339,7 +339,7 @@ class Vector(object):
             x = -magnitude
         if angle == 270:
             y = magnitude
-        return Cartesian(x, y)
+        return Point(x, y)
 
     def reflect(self, horizontally=False, vertically=False):
         normed_angle = self.angle % 360
@@ -375,7 +375,7 @@ class Ball(object):
         ball_corners = Corners(*[
             Segment(
                 corner,
-                Cartesian(corner.x + delta.x, corner.y + delta.y))
+                Point(corner.x + delta.x, corner.y + delta.y))
             for corner in self.rect.corners
         ])
         hits = Sides(*[
@@ -487,7 +487,7 @@ class MercilessAutomaton:
         magnitude = diff_x / math.cos(math.radians(angle))
         projected = Vector(angle, magnitude)
         proj_y = y + projected.cartesian.y
-        intercept = Cartesian(intercept_x, proj_y)
+        intercept = Point(intercept_x, proj_y)
         self.prediction.add(start)
 
         if 0 <= proj_y <= SCREEN_HEIGHT:
@@ -519,7 +519,7 @@ class MercilessAutomaton:
         new_diff_x = abs(
             math.tan(math.radians(90 - (angle % 180))) * new_diff_y)
 
-        new_start = Cartesian(x + new_diff_x, next_y)
+        new_start = Point(x + new_diff_x, next_y)
         new_vector = vector.reflect(vertically=True)
         return self.predict_intercept(new_start, new_vector, intercept_x,
                                       max_reflections-1)
@@ -542,7 +542,7 @@ class MercilessAutomaton:
         is_in_play = (its_coming_right_for_us and
                       ball.rect.left <= self.paddle.rect.left)
         if is_in_play:
-            ball_location = Cartesian(*ball.rect.center)
+            ball_location = Point(*ball.rect.center)
             intercept = self.predict_intercept(
                 ball_location, ball.vector, self.paddle.rect.left)
             sweet_spot = Sides(
