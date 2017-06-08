@@ -47,7 +47,7 @@ BALL_WIDTH = 20
 BALL_COLOR = Color(r=127, g=216, b=127)
 
 # Paddle constants
-PADDLE_MIN_SPEED = 20 * BASE_FPS / FRAMES_PER_SECOND
+PADDLE_MIN_SPEED = 24 * BASE_FPS / FRAMES_PER_SECOND
 PADDLE_MAX_SPEED = 40 * BASE_FPS / FRAMES_PER_SECOND
 PADDLE_SPEED_INCR = 2 * BASE_FPS / FRAMES_PER_SECOND
 PADDLE_SPEED_DECR = 4 * BASE_FPS / FRAMES_PER_SECOND
@@ -281,7 +281,7 @@ class MercilessAutomaton:
     def __init__(self, paddle):
         self.paddle = paddle
         self.prediction = Path()
-        self.sweet_spot_radius = self.paddle.rect.height // 4
+        self.sweet_spot_radius = self.paddle.rect.height // 2
 
     # TODO: don't assume we are on the right side
     def predict_intercept(self, start, vector, intercept_x, max_reflections=5):
