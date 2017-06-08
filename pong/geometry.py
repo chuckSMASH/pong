@@ -4,7 +4,6 @@ Useful geometric abstractions
 """
 
 import math
-from collections import OrderedDict
 from collections import namedtuple
 
 import pygame
