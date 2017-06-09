@@ -1,6 +1,9 @@
 '''
 Model menu mode, game mode, pause mode etc as a state machine
 '''
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 import sys
 from abc import ABCMeta
 from abc import abstractmethod

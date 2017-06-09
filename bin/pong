@@ -3,6 +3,9 @@
 Pong in Pygame (written against Python 3.5)
 """
 
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 import argparse
 from textwrap import dedent
 
