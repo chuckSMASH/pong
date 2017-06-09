@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/chuckSMASH/pong/tree/master.svg?style=svg)](https://circleci.com/gh/chuckSMASH/pong/tree/master)
+
 it's like pong.
 
 
