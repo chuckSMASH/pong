@@ -1,18 +1,24 @@
+'''
+Super incomplete tests for pong.geometry
+'''
+
 import math
 import unittest
 
-import pong
+from pong.geometry import Point
+from pong.geometry import Rect
+from pong.geometry import Segment
+from pong.geometry import Vector
 
 
 class RectTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.rect1 = pong.Rect(15, 20, 60, 80)
+        self.rect1 = Rect(15, 20, 60, 80)
         # rect2 overlaps rect1
-        self.rect2 = pong.Rect(13, 19, 10, 10)
+        self.rect2 = Rect(13, 19, 10, 10)
         # rect3 is contained by rect1
-        self.rect3 = pong.Rect(16, 21, 10, 10)
-
+        self.rect3 = Rect(16, 21, 10, 10)
 
     def test_repr(self):
         self.assertEqual(
@@ -43,15 +49,15 @@ class VectorTestCase(unittest.TestCase):
         for angle in range(0, 361, 3):
             cos = math.cos(math.radians(angle))
             sin = math.sin(math.radians(angle))
-            point = pong.Cartesian(cos, -sin)
-            vector = pong.Vector(angle, 1)
-            cart_vector = pong.Vector.from_cartesian(*point)
+            point = Point(cos, -sin)
+            vector = Vector(angle, 1)
+            cart_vector = Vector.from_cartesian(*point)
             self.points.append(point)
             self.vectors.append(vector)
             self.cart_vectors.append(cart_vector)
 
     def test_init(self):
-        vector = pong.Vector(-15, 1)
+        vector = Vector(-15, 1)
         self.assertAlmostEqual(vector.angle, 345)
 
     def test_from_cartesian(self):
@@ -83,3 +89,45 @@ class VectorTestCase(unittest.TestCase):
             self.assertAlmostEqual(rehoriz.angle, vector.angle)
             self.assertAlmostEqual(combo1.angle, combo2.angle)
             self.assertAlmostEqual(combo1.angle, both.angle)
+
+
+class SegmentTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.s1 = Segment(Point(0, 0), Point(1, 1))
+        self.s2 = Segment(Point(0, 1), Point(1, 0))
+        self.s3 = Segment(Point(0, -1), Point(1, 0))
+        self.s4 = Segment(Point(1, 1), Point(2, 2))
+
+    def test_line(self):
+        s1_line = self.s1.line
+        s2_line = self.s2.line
+        s3_line = self.s3.line
+        self.assertEqual(s1_line.slope, 1)
+        self.assertEqual(s1_line.intercept, 0)
+        self.assertEqual(s2_line.slope, -1)
+        self.assertEqual(s2_line.intercept, 1)
+        self.assertEqual(s3_line.slope, 1)
+        self.assertEqual(s3_line.intercept, -1)
+
+    def test_intersection(self):
+        actual_expected = [
+            (self.s1.intersection(self.s2), Point(0.5, 0.5)),
+            (self.s2.intersection(self.s1), Point(0.5, 0.5)),
+            (self.s1.intersection(self.s3), None),
+            (self.s3.intersection(self.s1), None),
+            (self.s1.intersection(self.s4), None),
+            (self.s4.intersection(self.s1), None),
+            (self.s2.intersection(self.s3), Point(1, 0)),
+            (self.s3.intersection(self.s2), Point(1, 0)),
+            (self.s2.intersection(self.s4), None),
+            (self.s4.intersection(self.s2), None),
+            (self.s3.intersection(self.s4), None),
+            (self.s4.intersection(self.s3), None),
+        ]
+        for actual, expected in actual_expected:
+            if expected is None:
+                self.assertIsNone(actual)
+            else:
+                for actual_coord, expected_coord in zip(actual, expected):
+                    self.assertAlmostEqual(actual_coord, expected_coord)
