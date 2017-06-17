@@ -1,4 +1,5 @@
-[![CircleCI](https://circleci.com/gh/chuckSMASH/pong/tree/master.svg?style=svg)](https://circleci.com/gh/chuckSMASH/pong/tree/master)
+[![Build Status](https://img.shields.io/travis/chuckSMASH/pong.svg)](https://travis-ci.org/chuckSMASH/scythe)
+[![Coverage](https://img.shields.io/coveralls/chuckSMASH/pong.svg)](https://coveralls.io/r/chuckSMASH/scythe)
 
 it's like pong.
 
