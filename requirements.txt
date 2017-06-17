@@ -1,3 +1,2 @@
-nose
-pygame
-six
+-r requirements/base.txt
+-r requirements/testing.txt
